@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import './globals.css'
+import Header from '@/components/layout/Header'
+import AIChatWidget from '@/components/ui/AIChatWidget'
 
 const inter = Inter({ variable: '--font-geist-sans', subsets: ['latin'] })
-
 
 export const metadata: Metadata = {
   title: 'NurseryPlaceFinder – Find Nursery Places in Northern Ireland',
