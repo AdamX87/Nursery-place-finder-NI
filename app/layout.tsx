@@ -1,12 +1,7 @@
-// app/layout.tsx
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import './globals.css'
-import Header from '@/components/layout/Header'
-import AIChatWidget from '@/components/ui/AIChatWidget'
+import { Inter } from 'next/font/google'
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
+const inter = Inter({ variable: '--font-geist-sans', subsets: ['latin'] })
+
 
 export const metadata: Metadata = {
   title: 'NurseryPlaceFinder – Find Nursery Places in Northern Ireland',
@@ -17,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}>
+      <body className={`${inter.variable} antialiased bg-gray-50 min-h-screen`}>
         <Header />
         <main className="max-w-2xl mx-auto px-4 pb-20">
           {children}
