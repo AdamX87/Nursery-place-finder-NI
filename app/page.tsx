@@ -63,7 +63,7 @@ export default function HomePage() {
       </section>
 
       {/* Search card – overlaps hero */}
-      <div className="-mt-4 mb-6">
+      <div className="-mt-8 mb-6">
         <SearchForm />
       </div>
 
