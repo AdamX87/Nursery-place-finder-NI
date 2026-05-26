@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
