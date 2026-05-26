@@ -1,4 +1,5 @@
-// app/api/admin/nurseries/route.ts
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,14 +13,12 @@ export async function GET() {
     .from('nurseries')
     .select('*')
     .order('name', { ascending: true })
-
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ nurseries: data })
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-
   const nursery = {
     id: `npf-${Date.now()}`,
     name: body.name,
@@ -44,13 +43,7 @@ export async function POST(req: NextRequest) {
     icon: body.icon || '🏫',
     color: body.color || '#F0FDF4',
   }
-
-  const { data, error } = await supabase
-    .from('nurseries')
-    .insert(nursery)
-    .select()
-    .single()
-
+  const { data, error } = await supabase.from('nurseries').insert(nursery).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ nursery: data })
 }
