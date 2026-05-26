@@ -1,32 +1,52 @@
 // app/results/page.tsx
 'use client'
 import { useSearchParams } from 'next/navigation'
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { SlidersHorizontal, X, MapPin, Baby } from 'lucide-react'
 import NurseryCard from '@/components/ui/NurseryCard'
 import SearchForm from '@/components/ui/SearchForm'
-import { MOCK_NURSERIES } from '@/lib/mockData'
 import { rankNurseries, childAge } from '@/lib/eligibility'
-import { Likelihood } from '@/types'
+import { Likelihood, Nursery } from '@/types'
 
 function ResultsContent() {
   const params = useSearchParams()
   const postcode = params.get('postcode') ?? ''
   const dob = params.get('dob') ?? ''
 
+  const [allNurseries, setAllNurseries] = useState<Nursery[]>([])
+  const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState<'all' | 'full-time' | 'part-time'>('all')
   const [filterLikelihood, setFilterLikelihood] = useState<'all' | Likelihood>('all')
   const [filterFunded, setFilterFunded] = useState<'all' | 'funded' | 'private'>('all')
   const [filterSpaces, setFilterSpaces] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
-  const ranked = useMemo(
-    () => rankNurseries(MOCK_NURSERIES, dob, postcode),
-    [dob, postcode]
-  )
+  useEffect(() => {
+    setLoading(true)
+    fetch('/api/nurseries')
+      .then(r => r.json())
+      .then(({ nurseries }) => {
+        if (nurseries && nurseries.length > 0) {
+          // Map snake_case from Supabase to camelCase for components
+          const mapped = nurseries.map((n: any) => ({
+            ...n,
+            sessionType: n.session_type,
+            ageMin: n.age_min,
+            ageMax: n.age_max,
+            spacesAvailable: n.spaces_available,
+            waitlistOpen: n.waitlist_open,
+            nextIntake: n.next_intake,
+            deFunded: n.de_funded,
+          }))
+          setAllNurseries(rankNurseries(mapped, dob, postcode))
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [dob, postcode])
 
   const filtered = useMemo(() => {
-    return ranked.filter(n => {
+    return allNurseries.filter(n => {
       if (filterType !== 'all' && n.sessionType !== filterType) return false
       if (filterLikelihood !== 'all' && n.likelihood !== filterLikelihood) return false
       if (filterFunded === 'funded' && !n.deFunded) return false
@@ -34,7 +54,7 @@ function ResultsContent() {
       if (filterSpaces && n.spacesAvailable === 0) return false
       return true
     })
-  }, [ranked, filterType, filterLikelihood, filterFunded, filterSpaces])
+  }, [allNurseries, filterType, filterLikelihood, filterFunded, filterSpaces])
 
   const highCount = filtered.filter(n => n.likelihood === 'High').length
   const activeFilterCount = [
@@ -72,11 +92,17 @@ function ResultsContent() {
       {/* Results summary */}
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h1 className="font-extrabold text-gray-900 text-lg">{filtered.length} nurseries found</h1>
-          {highCount > 0 && (
-            <p className="text-xs text-green-700 font-semibold mt-0.5">
-              ✓ {highCount} with High admissions chance
-            </p>
+          {loading ? (
+            <div className="h-6 w-40 bg-gray-100 rounded animate-pulse" />
+          ) : (
+            <>
+              <h1 className="font-extrabold text-gray-900 text-lg">{filtered.length} nurseries found</h1>
+              {highCount > 0 && (
+                <p className="text-xs text-green-700 font-semibold mt-0.5">
+                  ✓ {highCount} with High admissions chance
+                </p>
+              )}
+            </>
           )}
         </div>
         <button
@@ -95,7 +121,6 @@ function ResultsContent() {
       {/* Filter panel */}
       {showFilters && (
         <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4 space-y-4 shadow-sm animate-slide-up">
-          {/* Session type */}
           <div>
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Session type</div>
             <div className="flex gap-2 flex-wrap">
@@ -113,7 +138,6 @@ function ResultsContent() {
             </div>
           </div>
 
-          {/* Likelihood */}
           <div>
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Admissions likelihood</div>
             <div className="flex gap-2 flex-wrap">
@@ -131,7 +155,6 @@ function ResultsContent() {
             </div>
           </div>
 
-          {/* Funding */}
           <div>
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Funding</div>
             <div className="flex gap-2 flex-wrap">
@@ -149,7 +172,6 @@ function ResultsContent() {
             </div>
           </div>
 
-          {/* Spaces toggle */}
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold text-gray-800">Only show with spaces</div>
@@ -165,7 +187,6 @@ function ResultsContent() {
             </button>
           </div>
 
-          {/* Reset */}
           {activeFilterCount > 0 && (
             <button
               onClick={() => { setFilterType('all'); setFilterLikelihood('all'); setFilterFunded('all'); setFilterSpaces(false) }}
@@ -178,18 +199,30 @@ function ResultsContent() {
       )}
 
       {/* Results */}
-      <div className="space-y-3">
-        {filtered.map(n => (
-          <NurseryCard key={n.id} nursery={n} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-            <div className="text-4xl mb-3">🔍</div>
-            <div className="font-bold text-gray-900 mb-1">No nurseries match</div>
-            <div className="text-gray-500 text-sm">Try adjusting or clearing your filters</div>
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-44 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(n => (
+            <NurseryCard key={n.id} nursery={n} />
+          ))}
+          {filtered.length === 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+              <div className="text-4xl mb-3">🔍</div>
+              <div className="font-bold text-gray-900 mb-1">No nurseries found</div>
+              <div className="text-gray-500 text-sm">
+                {allNurseries.length === 0
+                  ? 'No nurseries in the database yet. Add some via the admin panel.'
+                  : 'Try adjusting or clearing your filters'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
