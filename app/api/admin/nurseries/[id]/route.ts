@@ -1,43 +1,38 @@
-export const dynamic = "force-dynamic"
-
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
-  const { data, error } = await supabase
-    .from('nurseries')
-    .select('*')
-    .eq('id', params.id)
-    .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 404 })
-  return NextResponse.json({ nursery: data })
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/nurseries?id=eq.${params.id}`, {
+    headers: { apikey: SUPABASE_KEY!, Authorization: `Bearer ${SUPABASE_KEY}` },
+  })
+  const data = await res.json()
+  return NextResponse.json({ nursery: data[0] })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-  const fields = ['name','area','postcode','address','phone','email','website','type','session_type','sessions','age_min','age_max','spaces_available','waitlist_open','next_intake','de_funded','rating','tags','admissions_criteria','icon','color']
-  for (const field of fields) {
-    if (body[field] !== undefined) {
-      if (['age_min','age_max','spaces_available'].includes(field)) updates[field] = parseInt(body[field])
-      else if (field === 'rating') updates[field] = parseFloat(body[field])
-      else updates[field] = body[field]
-    }
-  }
-  const { data, error } = await supabase.from('nurseries').update(updates).eq('id', params.id).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ nursery: data })
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/nurseries?id=eq.${params.id}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY!,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ ...body, updated_at: new Date().toISOString() }),
+  })
+  const data = await res.json()
+  return NextResponse.json({ nursery: data[0] })
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await supabase.from('nurseries').delete().eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await fetch(`${SUPABASE_URL}/rest/v1/nurseries?id=eq.${params.id}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY!, Authorization: `Bearer ${SUPABASE_KEY}` },
+  })
   return NextResponse.json({ success: true })
 }

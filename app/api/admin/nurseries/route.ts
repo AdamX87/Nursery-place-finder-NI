@@ -1,21 +1,18 @@
-export const dynamic = "force-dynamic"
-
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from('nurseries')
-    .select('*')
-    .order('name', { ascending: true })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/nurseries?order=name`, {
+    headers: {
+      apikey: SUPABASE_KEY!,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    },
+  })
+  const data = await res.json()
   return NextResponse.json({ nurseries: data })
 }
 
@@ -45,7 +42,16 @@ export async function POST(req: NextRequest) {
     icon: body.icon || '🏫',
     color: body.color || '#F0FDF4',
   }
-  const { data, error } = await supabase.from('nurseries').insert(nursery).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ nursery: data })
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/nurseries`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY!,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify(nursery),
+  })
+  const data = await res.json()
+  return NextResponse.json({ nursery: data[0] })
 }
